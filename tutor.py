@@ -68,12 +68,14 @@ class Keyboard:
     def draw(self, screen):
         screen.blit(self.image, (0, HEIGHT - self.image.get_height()))
 
-        for key, (x, y, w, h) in self.pressed_keys:
+        for key_data in self.pressed_keys:
+            key_code, x, y, w, h = key_data
             pygame.draw.rect(screen, (0, 0, 255), (x, HEIGHT - self.image.get_height() + y, w, h), 2)
 
     def handle_keydown(self, key_code):
         if key_code in self.key_map:
-            self.pressed_keys.add(key_code)
+            x, y, w, h = self.key_map[key_code]
+            self.pressed_keys.add((key_code, x, y, w, h))
 
     def handle_keyup(self, key_code):
         if key_code in self.pressed_keys:
