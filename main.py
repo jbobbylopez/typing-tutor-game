@@ -63,7 +63,7 @@ def create_floating_letter(font, screen_width, screen_height):
     return FloatingLetter(letter, font, x, y, speed, color=DEFAULT_COLOR)
 
 def create_floating_word(font, screen_width, screen_height, floating_objects, max_attempts=10):
-    word = random.choice(simple_words)
+    word = random.choice(list(simple_words))
     success = False
     attempts = 0
 
@@ -88,11 +88,12 @@ def create_floating_word(font, screen_width, screen_height, floating_objects, ma
             attempts += 1
 
     if success:
-        speed = MAX_SPEED
+        speed_x = 0  # Set the x-speed to 0
+        speed_y = -random.uniform(MIN_SPEED, MAX_SPEED)  # Set the y-speed to a negative random value between MIN_SPEED and MAX_SPEED
+        speed = (speed_x, speed_y)
         return FloatingWord(word, font, x, y, speed, color=DEFAULT_COLOR)
     else:
         return None
-
 
 def wrap_text(text, font, max_width):
     lines = []
@@ -198,8 +199,8 @@ class FloatingWord(FloatingObject):
         screen.blit(text_surface, (self.x, self.y))
 
     def update(self, dt):
-        for letter in self.letters:
-            letter.update(dt)
+        self.x += self.speed[0] * dt
+        self.y += self.speed[1] * dt
 
     def is_offscreen(self, screen_height):
         return all(letter.is_offscreen(screen_height) for letter in self.letters)
