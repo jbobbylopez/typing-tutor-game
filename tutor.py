@@ -7,6 +7,7 @@ import textwrap
 import nltk
 from nltk.corpus import words
 nltk.download('words')
+words_list = words.words()
 english_words = set(words.words())
 
 # Constants
@@ -58,12 +59,36 @@ def create_floating_letter(font, screen_width, screen_height):
     speed = MAX_SPEED
     return FloatingLetter(letter, font, x, y, speed, color=DEFAULT_COLOR)
 
-def create_floating_word(font, screen_width, screen_height):
+def create_floating_word(font, screen_width, screen_height, floating_objects, max_attempts=10):
     word = random.choice(list(english_words))
-    x = random.randint(TEXT_INPUT_HEIGHT, screen_width - font.size(word)[0])
-    y = random.randint(TEXT_INPUT_HEIGHT, screen_height - font.size(word)[1])
-    speed = MAX_SPEED
-    return FloatingWord(word, font, x, y, speed, color=DEFAULT_COLOR)
+    success = False
+    attempts = 0
+
+    while not success and attempts < max_attempts:
+        x = random.randint(TEXT_INPUT_HEIGHT, screen_width - font.size(word)[0])
+        y = random.randint(TEXT_INPUT_HEIGHT, screen_height - font.size(word)[1])
+
+        # Check for collisions with existing floating words
+        collision = False
+        for obj in floating_objects:
+            if isinstance(obj, FloatingWord):
+                obj_rect = pygame.Rect(obj.x, obj.y, font.size(obj.word)[0], font.size(obj.word)[1])
+                new_obj_rect = pygame.Rect(x, y, font.size(word)[0], font.size(word)[1])
+                if obj_rect.colliderect(new_obj_rect):
+                    collision = True
+                    break
+
+        if not collision:
+            success = True
+        else:
+            attempts += 1
+
+    if success:
+        speed = MAX_SPEED
+        return FloatingWord(word, font, x, y, speed, color=DEFAULT_COLOR)
+    else:
+        return None
+
 
 def wrap_text(text, font, max_width):
     lines = []
@@ -236,7 +261,10 @@ def main():
             if current_mode == 'letters':
                 new_object = create_floating_letter(font, WIDTH, HEIGHT - TEXT_INPUT_HEIGHT)
             elif current_mode == 'words':
-                new_object = create_floating_word(font, WIDTH, HEIGHT - TEXT_INPUT_HEIGHT)
+                new_object = create_floating_word(font, WIDTH, HEIGHT - TEXT_INPUT_HEIGHT, floating_objects)
+                if new_object is not None:
+                    floating_objects.append(new_object)
+
             floating_objects.append(new_object)
             last_spawn_time = time.time()
 
