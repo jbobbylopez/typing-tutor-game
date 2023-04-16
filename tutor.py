@@ -4,6 +4,10 @@ import time
 import random
 import string
 import textwrap
+import nltk
+from nltk.corpus import words
+nltk.download('words')
+english_words = set(words.words())
 
 # Constants
 MAX_LINES = 5
@@ -54,6 +58,13 @@ def create_floating_letter(font, screen_width, screen_height):
     speed = MAX_SPEED
     return FloatingLetter(letter, font, x, y, speed, color=DEFAULT_COLOR)
 
+def create_floating_word(font, screen_width, screen_height):
+    word = random.choice(list(english_words))
+    x = random.randint(TEXT_INPUT_HEIGHT, screen_width - font.size(word)[0])
+    y = random.randint(TEXT_INPUT_HEIGHT, screen_height - font.size(word)[1])
+    speed = MAX_SPEED
+    return FloatingWord(word, font, x, y, speed, color=DEFAULT_COLOR)
+
 def wrap_text(text, font, max_width):
     lines = []
     words = text.split(' ')
@@ -72,8 +83,31 @@ def wrap_text(text, font, max_width):
     return lines
 
 
+# Create the FloatingObject base class
+class FloatingObject:
+    def __init__(self, x, y, speed):
+        self.x = x
+        self.y = y
+        self.speed = speed
+
+    def update(self, dt):
+        self.y -= self.speed * dt
+
+    def draw(self, surface):
+        pass
+
+    def is_offscreen(self, screen_height):
+        return False
+
+    def highlight(self):
+        pass
+
+    def ready_to_remove(self):
+        return False
+
+
 # Create the FloatingLetter class
-class FloatingLetter:
+class FloatingLetter(FloatingObject):
     def __init__(self, letter, font, x, y, speed, color=(0, 0, 0), highlight_colors=((255, 0, 0), (255, 255, 0), (255, 0, 0))):
         self.letter = letter
         self.font = font
@@ -111,8 +145,36 @@ class FloatingLetter:
     def ready_to_remove(self):
         return self.highlighted and time.time() - self.highlight_start_time >= self.flash_duration * len(self.highlight_colors)
 
+class FloatingWord(FloatingObject):
+    def __init__(self, word, font, x, y, speed, color=DEFAULT_COLOR):
+        super().__init__(x, y, speed)
+        self.word = word
+        self.font = font
+        self.color = color
+        self.letters = [FloatingLetter(letter, font, x + i * font.size(letter)[0], y, speed, color=color) for i, letter in enumerate(word)]
+
+    def draw(self, surface):
+        for letter in self.letters:
+            letter.draw(surface)
+
+    def update(self, dt):
+        for letter in self.letters:
+            letter.update(dt)
+
+    def is_offscreen(self, screen_height):
+        return all(letter.is_offscreen(screen_height) for letter in self.letters)
+
+    def highlight(self):
+        for letter in self.letters:
+            letter.highlight()
+
+    def ready_to_remove(self):
+        return all(letter.ready_to_remove() for letter in self.letters)
+
 def main():
     init_pygame()
+
+    current_mode = 'words'  # Change this to 'words' for floating words mode
 
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Typing Game")
@@ -142,7 +204,7 @@ def main():
     cursor_visible = True
     last_blink_time = time.time()
 
-    floating_letters = []
+    floating_objects = []
     last_spawn_time = time.time()
 
     
@@ -169,20 +231,26 @@ def main():
                 else:
                     user_input += event.unicode
 
-        # Spawn new floating letters
+        # Spawn new floating objects based on the current mode
         if time.time() - last_spawn_time >= LETTER_SPAWN_INTERVAL:
-            new_letter = create_floating_letter(font, WIDTH, HEIGHT - TEXT_INPUT_HEIGHT)
-            floating_letters.append(new_letter)
+            if current_mode == 'letters':
+                new_object = create_floating_letter(font, WIDTH, HEIGHT - TEXT_INPUT_HEIGHT)
+            elif current_mode == 'words':
+                new_object = create_floating_word(font, WIDTH, HEIGHT - TEXT_INPUT_HEIGHT)
+            floating_objects.append(new_object)
             last_spawn_time = time.time()
 
-        # Update floating letters
-        for letter in floating_letters:
-            letter.update(dt)
-            if user_input and user_input[-1].lower() == letter.letter.lower() and not letter.highlighted:
-                letter.highlight()
+        # Update floating objects based on the current mode
+        for obj in floating_objects:
+            obj.update(dt)
+            if isinstance(obj, FloatingLetter) and user_input and user_input[-1].lower() == obj.letter.lower() and not obj.highlighted:
+                obj.highlight()
                 user_input = user_input[:-1]
+            elif isinstance(obj, FloatingWord) and user_input.lower() == obj.word.lower() and not obj.highlighted:
+                obj.highlight()
+                user_input = ''
 
-        floating_letters = [letter for letter in floating_letters if not letter.is_offscreen(HEIGHT - TEXT_INPUT_HEIGHT) and not letter.ready_to_remove()]
+        floating_objects = [obj for obj in floating_objects if not obj.is_offscreen(HEIGHT - TEXT_INPUT_HEIGHT) and not obj.ready_to_remove()]
 
         # Cursor blink handling
         cursor_visible, last_blink_time = handle_cursor_blinking(time.time(), last_blink_time, cursor_visible, CURSOR_BLINK_RATE)
@@ -193,9 +261,9 @@ def main():
         screen.blit(hands_image, (hands_image_x, hands_image_y))
 
 
-        # Draw floating letters
-        for letter in floating_letters:
-            letter.draw(screen)
+        # Draw floating objects
+        for obj in floating_objects:
+            obj.draw(screen)
 
         # Draw input box
         text_input_surface.fill(INPUT_BACKGROUND_COLOR)
