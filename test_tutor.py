@@ -1,6 +1,6 @@
 import unittest
 import pygame
-from tutor import create_floating_letter, create_floating_word, wrap_text
+from main import create_floating_letter, create_floating_word, wrap_text
 
 class TestFloatingLetterCreation(unittest.TestCase):
     def setUp(self):

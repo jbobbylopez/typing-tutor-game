@@ -4,11 +4,14 @@ import time
 import random
 import string
 import textwrap
-import nltk
+
 from nltk.corpus import words
+import nltk
+
 nltk.download('words')
 words_list = words.words()
-english_words = set(words.words())
+english_words = set(words_list)
+
 
 # Constants
 MAX_LINES = 5
@@ -60,7 +63,7 @@ def create_floating_letter(font, screen_width, screen_height):
     return FloatingLetter(letter, font, x, y, speed, color=DEFAULT_COLOR)
 
 def create_floating_word(font, screen_width, screen_height, floating_objects, max_attempts=10):
-    word = random.choice(list(english_words))
+    word = random.choice(simple_words)
     success = False
     attempts = 0
 
@@ -109,6 +112,16 @@ def wrap_text(text, font, max_width):
 
     return lines
 
+def read_words_from_file(file_path):
+    with open(file_path, 'r') as file:
+        words_list = file.read().splitlines()
+    return words_list
+
+# Add this line to read words from the frequency list
+frequency_list = set(read_words_from_file('assets/frequency_list.txt'))
+
+# Modify the list comprehension
+simple_words = [word for word in english_words if 3 <= len(word) <= 5 and word in frequency_list]
 
 # Create the FloatingObject base class
 class FloatingObject:
@@ -180,9 +193,9 @@ class FloatingWord(FloatingObject):
         self.color = color
         self.letters = [FloatingLetter(letter, font, x + i * font.size(letter)[0], y, speed, color=color) for i, letter in enumerate(word)]
 
-    def draw(self, surface):
-        for letter in self.letters:
-            letter.draw(surface)
+    def draw(self, screen):
+        text_surface = self.font.render(self.word, True, self.color)  # Set the antialias parameter to True
+        screen.blit(text_surface, (self.x, self.y))
 
     def update(self, dt):
         for letter in self.letters:
@@ -205,6 +218,11 @@ def main():
 
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Typing Game")
+
+    # Add the font-related statements here
+    font_path = "assets/DejaVuSansMono.ttf"
+    font_size = 32
+    font = pygame.font.Font(font_path, font_size)
     
     clock = pygame.time.Clock()
     
