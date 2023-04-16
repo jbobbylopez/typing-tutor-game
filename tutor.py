@@ -1,85 +1,31 @@
 import pygame
 import os
 import time
+import random
+import string
 
-class TextInput:
-    def __init__(self, x, y, width, height, font, max_lines, padding=5):
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
-        self.font = font
-        self.max_lines = max_lines
-        self.padding = padding
+# Constants
+MAX_LINES = 5
+WIDTH, HEIGHT = 800, 600
+BACKGROUND_COLOR = (0, 0, 0)
+TEXT_INPUT_HEIGHT = int(HEIGHT * 0.1)
+CURSOR_BLINK_RATE = 500
+PADDING = 10
+LINE_SPACING = 4
+TEXT_INPUT_X = 0
+TEXT_INPUT_Y = HEIGHT - TEXT_INPUT_HEIGHT
+TEXT_INPUT_WIDTH = int(WIDTH * 0.9)
+TEXT_INPUT_HEIGHT = int(HEIGHT * 0.1)
+FLOATING_LETTERS = 5
+LETTER_SPAWN_INTERVAL = 1.5
+DEFAULT_COLOR = (153, 255, 153)
+INPUT_BACKGROUND_COLOR = (0, 100, 0)
+INPUT_TEXT_COLOR = (153, 255, 153)
+MIN_SPEED = 20.0
+MAX_SPEED = 20.0
+KEYBOARD_IMAGE = "keyboard.png"
+HANDS_IMAGE = "hands.png"
 
-        self.text_lines = [""]
-        self.current_line_index = 0
-        self.cursor_position = 0
-        self.line_height = self.font.get_height() + 2
-        self.cursor_blink_timer = 0
-        self.cursor_visible = True
-
-    def draw(self, surface, x, y):
-        for index, line in enumerate(self.text_lines):
-            rendered_line = self.font.render(line, True, (0, 0, 0))
-            surface.blit(rendered_line, (x, y + index * (self.font.get_height() + self.line_height)))
-
-
-    def handle_keydown(self, event_key, event_unicode):
-        if event_key == pygame.K_RETURN:
-            self.text_lines.append("")
-            self.current_line_index += 1
-        elif event_key == pygame.K_BACKSPACE:
-            if self.text_lines[self.current_line_index]:
-                self.text_lines[self.current_line_index] = self.text_lines[self.current_line_index][:-1]
-            elif self.current_line_index > 0:
-                self.text_lines.pop(self.current_line_index)
-                self.current_line_index -= 1
-        elif event_key == pygame.K_DELETE:
-            self.text_lines = [">"]
-            self.current_line_index = 0
-        else:
-            if len(self.text_lines[self.current_line_index]) < self.width:
-                self.text_lines[self.current_line_index] += event_unicode
-            elif len(self.text_lines) * (self.font.get_height() + self.line_spacing) < self.height - self.font.get_height() - self.line_spacing:
-                self.text_lines.append(event_unicode)
-                self.current_line_index += 1
-
-    def cursor_position(self):
-        cursor_x = self.padding + self.font.size(self.text[self.current_line])[0]
-        cursor_y = self.current_line * (self.font.get_height() + self.line_spacing)
-        return cursor_x, cursor_y
-
-    def draw_cursor(self, screen):
-        """Draw the cursor on the screen."""
-        if not self.text_lines:  # Check if the list is empty
-            self.text_lines.append("")
-        x = self.padding + self.font.size(self.text_lines[self.current_line_index][:self.cursor_position])[0]
-        y = self.padding + self.line_height * self.current_line_index
-        cursor_rect = pygame.Rect(x, y, 2, self.line_height)
-        pygame.draw.rect(screen, (0, 0, 0), cursor_rect)
-
-class Keyboard:
-    def __init__(self, image, key_map):
-        self.image = image
-        self.key_map = key_map
-        self.pressed_keys = set()
-
-    def draw(self, screen):
-        screen.blit(self.image, (0, HEIGHT - self.image.get_height()))
-
-        for key_data in self.pressed_keys:
-            key_code, x, y, w, h = key_data
-            pygame.draw.rect(screen, (0, 0, 255), (x, HEIGHT - self.image.get_height() + y, w, h), 2)
-
-    def handle_keydown(self, key_code):
-        if key_code in self.key_map:
-            x, y, w, h = self.key_map[key_code]
-            self.pressed_keys.add((key_code, x, y, w, h))
-
-    def handle_keyup(self, key_code):
-        if key_code in self.pressed_keys:
-            self.pressed_keys.remove(key_code)
 
 def init_pygame():
     pygame.init()
@@ -99,97 +45,158 @@ def handle_cursor_blinking(current_time, last_blink_time, cursor_visible, cursor
         last_blink_time = current_time
     return cursor_visible, last_blink_time
 
-def draw_border(surface, rect, color, thickness):
-    pygame.draw.lines(surface, color, True, [
-        (rect.left, rect.top),
-        (rect.right, rect.top),
-        (rect.right, rect.bottom),
-        (rect.left, rect.bottom)
-    ], thickness)
+def create_floating_letter(font, screen_width, screen_height):
+    letter = random.choice(string.ascii_letters)
+    #x = screen_width // 2 - font.size(letter)[0] // 2
+    x = random.randint(TEXT_INPUT_HEIGHT, screen_width - font.size(letter)[0])
+    y = random.randint(TEXT_INPUT_HEIGHT, screen_height - font.size(letter)[1])
+    speed = MAX_SPEED
+    return FloatingLetter(letter, font, x, y, speed, color=DEFAULT_COLOR)
 
-def generate_qwerty_key_map():
-    key_map = {
-        # Add the key codes and their corresponding (x, y, w, h) rectangular areas
-        pygame.K_a: (125, 140, 60, 58),  # Example values, replace with actual coordinates and dimensions
-        pygame.K_b: (430, 209, 57, 54), # Example values, replace with actual coordinates and dimensions
-        pygame.K_c: (295, 208, 57, 56), # Example values, replace with actual coordinates and dimensions
-        # ...
-    }
-    return key_map
+# Create the FloatingLetter class
+class FloatingLetter:
+    def __init__(self, letter, font, x, y, speed, color=(0, 0, 0), highlight_colors=((255, 0, 0), (255, 255, 0), (255, 0, 0))):
+        self.letter = letter
+        self.font = font
+        self.x = x
+        self.y = y
+        self.speed = speed
+        self.color = color
+        self.highlight_colors = highlight_colors
+        self.flash_duration = 0.25
+        self.highlighted = False
+        self.highlight_start_time = None
+        self.flash_index = 0
 
-# Constants
-MAX_LINES = 5
-WIDTH, HEIGHT = 800, 600
-BACKGROUND_COLOR = (255, 255, 255)
-TEXT_INPUT_HEIGHT = int(HEIGHT * 0.1)
-CURSOR_BLINK_RATE = 500
-PADDING = 10
-LINE_SPACING = 4
-TEXT_INPUT_X = 0
-TEXT_INPUT_Y = 0
-TEXT_INPUT_WIDTH = int(WIDTH * 0.9)
-TEXT_INPUT_HEIGHT = int(HEIGHT * 0.1)
+    def draw(self, surface):
+        if self.highlighted:
+            elapsed_time = time.time() - self.highlight_start_time
+            self.flash_index = int(elapsed_time // self.flash_duration) % len(self.highlight_colors)
+            color = self.highlight_colors[self.flash_index]
+        else:
+            color = self.color
+
+        rendered_letter = self.font.render(self.letter, True, color)
+        surface.blit(rendered_letter, (self.x, self.y))
+
+    def update(self, dt):
+        self.y -= self.speed * dt
+
+    def is_offscreen(self, screen_height):
+        return self.y < -self.font.get_height()
+
+    def highlight(self):
+        self.highlighted = True
+        self.highlight_start_time = time.time()
+
+    def ready_to_remove(self):
+        return self.highlighted and time.time() - self.highlight_start_time >= self.flash_duration * len(self.highlight_colors)
+
+def main():
+    init_pygame()
+
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Typing Game")
+    
+    clock = pygame.time.Clock()
+    
+    font = pygame.font.Font(None, 32)
+    text_input_surface = pygame.Surface((TEXT_INPUT_WIDTH, TEXT_INPUT_HEIGHT))
+    input_rect = pygame.Rect(TEXT_INPUT_X, TEXT_INPUT_Y, TEXT_INPUT_WIDTH, TEXT_INPUT_HEIGHT)
+
+    running = True
+    user_input = ''
+    cursor_visible = True
+    last_blink_time = time.time()
+
+    floating_letters = []
+    last_spawn_time = time.time()
+
+    # Set the position of the keyboard image at the bottom of the screen
+    keyboard_image = load_image(KEYBOARD_IMAGE, int(WIDTH * 0.9), int(HEIGHT * 0.3))
+    keyboard_image_x = (WIDTH - keyboard_image.get_width()) // 2
+    keyboard_image_y = HEIGHT - keyboard_image.get_height()
+
+    keyboard_image_filename = KEYBOARD_IMAGE
+    keyboard_rect = keyboard_image.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+    keyboard_image_width = int(WIDTH * 0.9)
+    keyboard_image_height = int(HEIGHT * 0.3)
+    keyboard_image = load_image(keyboard_image_filename, keyboard_image_width, keyboard_image_height)
+    
+    hands_image = load_image(HANDS_IMAGE, int(WIDTH * 0.9), int(HEIGHT * 0.3))
+    hands_rect = hands_image.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+    hands_image_x = (WIDTH - hands_image.get_width()) // 2
+    hands_image_y = HEIGHT - hands_image.get_height()
 
 
-# Initialize Pygame
-init_pygame()
 
-# Create a display
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Hands on Keyboard")
+    while running:
+        dt = clock.tick(60) / 1000
 
-# Load images
-keyboard_image = load_image("keyboard.png", WIDTH, int(HEIGHT * 0.4))
-hands_image = load_image("hands.png", WIDTH, int(HEIGHT * 0.6), alpha=153)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_BACKSPACE:
+                    user_input = user_input[:-1]
+                elif event.key == pygame.K_RETURN:
+                    user_input = ''
+                elif event.key == pygame.K_ESCAPE:
+                    running = False
+                else:
+                    user_input += event.unicode
 
-# Initialize font and text input
-font = pygame.font.Font(None, 24)
-max_chars_per_line = (WIDTH - 2 * PADDING) // (font.size("a")[0])
-text_input = TextInput(TEXT_INPUT_X, TEXT_INPUT_Y, TEXT_INPUT_WIDTH, TEXT_INPUT_HEIGHT, font, MAX_LINES)
+        # Spawn new floating letters
+        if time.time() - last_spawn_time >= LETTER_SPAWN_INTERVAL:
+            new_letter = create_floating_letter(font, WIDTH, HEIGHT - TEXT_INPUT_HEIGHT)
+            floating_letters.append(new_letter)
+            last_spawn_time = time.time()
 
-# Initialize keyboard
-key_map = generate_qwerty_key_map()
-keyboard = Keyboard(keyboard_image, key_map)
+        # Update floating letters
+        for letter in floating_letters:
+            letter.update(dt)
+            if user_input and user_input[-1].lower() == letter.letter.lower() and not letter.highlighted:
+                letter.highlight()
+                user_input = user_input[:-1]
 
-# Main loop
-running = True
-cursor_visible = True
-last_blink_time = time.time()
+        floating_letters = [letter for letter in floating_letters if not letter.is_offscreen(HEIGHT - TEXT_INPUT_HEIGHT) and not letter.ready_to_remove()]
 
-while running:
-    current_time = time.time()
-    screen.fill(BACKGROUND_COLOR)
+        # Cursor blink handling
+        cursor_visible, last_blink_time = handle_cursor_blinking(time.time(), last_blink_time, cursor_visible, CURSOR_BLINK_RATE)
 
-    # Event handling
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        elif event.type == pygame.KEYDOWN:
-            text_input.handle_keydown(event.key, event.unicode)
-            keyboard.handle_keydown(event.key)
-        elif event.type == pygame.KEYUP:
-            keyboard.handle_keyup(event.key)
+        # Draw
+        screen.fill(BACKGROUND_COLOR)
+        screen.blit(keyboard_image, (keyboard_image_x, keyboard_image_y))
+        screen.blit(hands_image, (hands_image_x, hands_image_y))
 
-    # Draw text input
-    text_input.draw(screen, PADDING, HEIGHT - TEXT_INPUT_HEIGHT - keyboard_image.get_height())
 
-    # Draw border around text input
-    draw_border(screen, pygame.Rect(PADDING, HEIGHT - TEXT_INPUT_HEIGHT - keyboard_image.get_height(), WIDTH - 2 * PADDING, TEXT_INPUT_HEIGHT), (0, 0, 0), 2)
+        # Draw floating letters
+        for letter in floating_letters:
+            letter.draw(screen)
 
-    # Draw keyboard
-    keyboard.draw(screen)
+        # Draw input box
+        text_input_surface.fill(INPUT_BACKGROUND_COLOR)
+        text_input_surface.set_alpha(128)
+        screen.blit(text_input_surface, input_rect)
 
-    # Draw hands
-    hands_rect = hands_image.get_rect()
-    hands_rect.y = HEIGHT - hands_image.get_height() * 0.75
-    screen.blit(hands_image, hands_rect)
+        # Draw user input
+        input_text = font.render(user_input, True, INPUT_TEXT_COLOR)
+        input_text_x = TEXT_INPUT_X + PADDING
+        input_text_y = TEXT_INPUT_Y + PADDING
+        screen.blit(input_text, (input_text_x, input_text_y))
 
-    # Cursor blinking
-    cursor_visible, last_blink_time = handle_cursor_blinking(current_time, last_blink_time, cursor_visible, CURSOR_BLINK_RATE)
-    if cursor_visible:
-        text_input.draw_cursor(screen)
 
-    # Update display
-    pygame.display.flip()
+        # Draw cursor
+        if cursor_visible:
+            cursor_x = input_text.get_width() + PADDING
+            cursor_y = PADDING
+            cursor_h = font.get_height()
+            cursor = pygame.Rect(cursor_x, cursor_y, 2, cursor_h)
+            pygame.draw.rect(screen, INPUT_TEXT_COLOR, cursor)
 
-pygame.quit()
+        pygame.display.flip()
+
+    pygame.quit()
+
+if __name__ == "__main__":
+    main()
