@@ -3,6 +3,7 @@ import os
 import time
 import random
 import string
+import textwrap
 
 # Constants
 MAX_LINES = 5
@@ -52,6 +53,24 @@ def create_floating_letter(font, screen_width, screen_height):
     y = random.randint(TEXT_INPUT_HEIGHT, screen_height - font.size(letter)[1])
     speed = MAX_SPEED
     return FloatingLetter(letter, font, x, y, speed, color=DEFAULT_COLOR)
+
+def wrap_text(text, font, max_width):
+    lines = []
+    words = text.split(' ')
+    current_line = words[0]
+
+    for word in words[1:]:
+        if font.size(current_line + ' ' + word)[0] <= max_width:
+            current_line += ' ' + word
+        else:
+            lines.append(current_line)
+            current_line = word
+
+    if current_line:
+        lines.append(current_line)
+
+    return lines
+
 
 # Create the FloatingLetter class
 class FloatingLetter:
@@ -184,16 +203,16 @@ def main():
         screen.blit(text_input_surface, input_rect)
 
         # Draw user input
-        input_text = font.render(user_input, True, INPUT_TEXT_COLOR)
-        input_text_x = TEXT_INPUT_X + PADDING
-        input_text_y = TEXT_INPUT_Y + PADDING
-        screen.blit(input_text, (input_text_x, input_text_y))
-
+        wrapped_text = wrap_text(user_input, font, TEXT_INPUT_WIDTH - PADDING * 2)
+        for i, line in enumerate(wrapped_text):
+            input_text = font.render(line, True, INPUT_TEXT_COLOR)
+            screen.blit(input_text, (TEXT_INPUT_X + PADDING, TEXT_INPUT_Y + PADDING + i * (font.get_height() + LINE_SPACING)))
 
         # Draw cursor
         if cursor_visible:
-            cursor_x = input_text.get_width() + PADDING
-            cursor_y = PADDING
+            last_line_width = font.size(wrapped_text[-1])[0] if wrapped_text else 0
+            cursor_x = TEXT_INPUT_X + PADDING + last_line_width
+            cursor_y = TEXT_INPUT_Y + PADDING + (len(wrapped_text) - 1) * (font.get_height() + LINE_SPACING)
             cursor_h = font.get_height()
             cursor = pygame.Rect(cursor_x, cursor_y, 2, cursor_h)
             pygame.draw.rect(screen, INPUT_TEXT_COLOR, cursor)
