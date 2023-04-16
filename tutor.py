@@ -80,6 +80,7 @@ def create_floating_word(font, screen_width, screen_height, floating_objects, ma
 
         if not collision:
             success = True
+            collision = False
         else:
             attempts += 1
 
@@ -92,6 +93,7 @@ def create_floating_word(font, screen_width, screen_height, floating_objects, ma
 
 def wrap_text(text, font, max_width):
     lines = []
+    text_surf = pygame.Surface((1, 1))
     words = text.split(' ')
     current_line = words[0]
 
