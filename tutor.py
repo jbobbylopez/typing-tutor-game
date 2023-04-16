@@ -12,8 +12,8 @@ TEXT_INPUT_HEIGHT = int(HEIGHT * 0.1)
 CURSOR_BLINK_RATE = 500
 PADDING = 10
 LINE_SPACING = 4
-TEXT_INPUT_X = 0
-TEXT_INPUT_Y = HEIGHT - TEXT_INPUT_HEIGHT
+#TEXT_INPUT_X = (WIDTH - TEXT_INPUT_WIDTH) // 2
+#@TEXT_INPUT_Y = HEIGHT - TEXT_INPUT_HEIGHT
 TEXT_INPUT_WIDTH = int(WIDTH * 0.9)
 TEXT_INPUT_HEIGHT = int(HEIGHT * 0.1)
 FLOATING_LETTERS = 5
@@ -102,6 +102,20 @@ def main():
     
     font = pygame.font.Font(None, 32)
     text_input_surface = pygame.Surface((TEXT_INPUT_WIDTH, TEXT_INPUT_HEIGHT))
+
+    # Set the position of the keyboard image at the bottom of the screen
+    keyboard_image_filename = KEYBOARD_IMAGE
+    keyboard_image_width = int(WIDTH * 0.9)
+    keyboard_image_height = int(HEIGHT * 0.3)
+    keyboard_image = load_image(keyboard_image_filename, keyboard_image_width, keyboard_image_height)
+    keyboard_image_x = (WIDTH - keyboard_image.get_width()) // 2
+    keyboard_image_y = HEIGHT - keyboard_image.get_height()
+    keyboard_rect = keyboard_image.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+
+
+    TEXT_INPUT_X = (WIDTH - TEXT_INPUT_WIDTH) // 2
+    TEXT_INPUT_Y = keyboard_image_y - TEXT_INPUT_HEIGHT - PADDING
+
     input_rect = pygame.Rect(TEXT_INPUT_X, TEXT_INPUT_Y, TEXT_INPUT_WIDTH, TEXT_INPUT_HEIGHT)
 
     running = True
@@ -112,16 +126,6 @@ def main():
     floating_letters = []
     last_spawn_time = time.time()
 
-    # Set the position of the keyboard image at the bottom of the screen
-    keyboard_image = load_image(KEYBOARD_IMAGE, int(WIDTH * 0.9), int(HEIGHT * 0.3))
-    keyboard_image_x = (WIDTH - keyboard_image.get_width()) // 2
-    keyboard_image_y = HEIGHT - keyboard_image.get_height()
-
-    keyboard_image_filename = KEYBOARD_IMAGE
-    keyboard_rect = keyboard_image.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-    keyboard_image_width = int(WIDTH * 0.9)
-    keyboard_image_height = int(HEIGHT * 0.3)
-    keyboard_image = load_image(keyboard_image_filename, keyboard_image_width, keyboard_image_height)
     
     hands_image = load_image(HANDS_IMAGE, int(WIDTH * 0.9), int(HEIGHT * 0.3))
     hands_rect = hands_image.get_rect(center=(WIDTH // 2, HEIGHT // 2))
