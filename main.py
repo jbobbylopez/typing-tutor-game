@@ -124,15 +124,20 @@ def read_words_from_file(file_path):
         words_list = file.read().splitlines()
     return words_list
 
-def check_words(user_input, floating_objects):
+def check_words(char, floating_objects):
+    score_increment = 0
+    matched = False
     for obj in floating_objects:
         if isinstance(obj, FloatingWord):
-            if obj.matched_chars < len(obj.word) and obj.word[obj.matched_chars] == user_input:
+            if obj.matched_chars < len(obj.word) and obj.word[obj.matched_chars] == char:
                 obj.matched_chars += 1
+                matched = True
                 if obj.matched_chars == len(obj.word):
                     floating_objects.remove(obj)
-                    return len(obj.word)
-    return 0
+                    score_increment += len(obj.word)
+            elif not matched:
+                obj.matched_chars = 0
+    return score_increment
 
 # Add this line to read words from the frequency list
 frequency_list = set(read_words_from_file('assets/frequency_list.txt'))
