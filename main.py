@@ -144,7 +144,8 @@ def check_words(char, floating_objects):
 
     return score_increment
 
-
+def on_button_click():
+    print("Button clicked!")
 
 
 # Add this line to read words from the frequency list
@@ -261,6 +262,31 @@ class FloatingWord(FloatingObject):
             return True
         return False
 
+class Button:
+    def __init__(self, x, y, width, height, text, font, text_color, button_color, hover_color, click_action=None):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.text = text
+        self.font = font
+        self.text_color = text_color
+        self.button_color = button_color
+        self.hover_color = hover_color
+        self.click_action = click_action
+
+    def draw(self, screen):
+        mouse_pos = pygame.mouse.get_pos()
+        if self.x <= mouse_pos[0] <= self.x + self.width and self.y <= mouse_pos[1] <= self.y + self.height:
+            pygame.draw.rect(screen, self.hover_color, (self.x, self.y, self.width, self.height))
+            if self.click_action and pygame.mouse.get_pressed()[0]:
+                self.click_action()
+        else:
+            pygame.draw.rect(screen, self.button_color, (self.x, self.y, self.width, self.height))
+
+        text_surface = self.font.render(self.text, True, self.text_color)
+        screen.blit(text_surface, (self.x + (self.width - text_surface.get_width()) // 2, self.y + (self.height - text_surface.get_height()) // 2))
+
 def main():
     init_pygame()
     score = 0
@@ -308,6 +334,9 @@ def main():
     hands_image_x = (WIDTH - hands_image.get_width()) // 2
     hands_image_y = HEIGHT - hands_image.get_height()
 
+    # Create a button instance
+    button_font = pygame.font.Font(font_path, 18)
+    button = Button(WIDTH // 2 - 100, 50, 200, 40, "Click me!", button_font, (255, 255, 255), (0, 128, 0), (0, 255, 0), on_button_click)
 
 
     running = True
@@ -381,6 +410,8 @@ def main():
         screen.blit(keyboard_image, (keyboard_image_x, keyboard_image_y))
         screen.blit(hands_image, (hands_image_x, hands_image_y))
 
+        # In the main loop, draw the button
+        button.draw(screen)
 
         # Draw floating objects
         for obj in floating_objects:
