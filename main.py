@@ -34,6 +34,7 @@ MIN_SPEED = 20.0
 MAX_SPEED = 20.0
 KEYBOARD_IMAGE = "keyboard.png"
 HANDS_IMAGE = "hands.png"
+HIGHLIGHT_COLOR = (255, 255, 0)  # Yellow color for highlighting matched characters
 
 
 def init_pygame():
@@ -156,13 +157,17 @@ class FloatingLetter(FloatingObject):
         self.font = font
         self.x = x
         self.y = y
-        self.speed = speed
+        self.speed_x, self.speed_y = speed  # Unpack the speed tuple
         self.color = color
         self.highlight_colors = highlight_colors
         self.flash_duration = 0.25
         self.highlighted = False
         self.highlight_start_time = None
         self.flash_index = 0
+
+        rendered_letter = self.font.render(self.letter, True, self.color)
+        self.width = rendered_letter.get_width()
+        self.height = rendered_letter.get_height()
 
     def draw(self, surface):
         if self.highlighted:
@@ -176,10 +181,10 @@ class FloatingLetter(FloatingObject):
         surface.blit(rendered_letter, (self.x, self.y))
 
     def update(self, dt):
-        self.y -= self.speed * dt
+        self.y += self.speed_y * dt  # Use self.speed_y instead of self.speed
 
     def is_offscreen(self, screen_height):
-        return self.y < -self.font.get_height()
+        return self.y < -self.height
 
     def highlight(self):
         self.highlighted = True
@@ -194,29 +199,45 @@ class FloatingWord(FloatingObject):
         self.word = word
         self.font = font
         self.color = color
-        self.letters = [FloatingLetter(letter, font, x + i * font.size(letter)[0], y, speed, color=color) for i, letter in enumerate(word)]
+        self.matched_chars = 0
+        self.remove_flag = False
+
+        self.letters = []
+        current_x = x
+        for char in word:
+            floating_letter = FloatingLetter(char, font, current_x, y, speed, color)
+            current_x += floating_letter.width
+            self.letters.append(floating_letter)
 
     def draw(self, screen):
-        text_surface = self.font.render(self.word, True, self.color)  # Set the antialias parameter to True
-        screen.blit(text_surface, (self.x, self.y))
-
-    def update(self, dt):
-        self.x += self.speed[0] * dt
-        self.y += self.speed[1] * dt
+        for i, letter in enumerate(self.letters):
+            if i < self.matched_chars:
+                letter.color = HIGHLIGHT_COLOR
+            else:
+                letter.color = self.color
+            letter.draw(screen)
 
     def is_offscreen(self, screen_height):
-        return all(letter.is_offscreen(screen_height) for letter in self.letters)
+        return any(letter.is_offscreen(screen_height) for letter in self.letters)
 
-    def highlight(self):
+    def update(self, dt):
         for letter in self.letters:
-            letter.highlight()
+            letter.update(dt)
 
     def ready_to_remove(self):
-        return all(letter.ready_to_remove() for letter in self.letters)
+        return self.remove_flag
+
+    def handle_key_press(self, key):
+        if self.matched_chars < len(self.word) and self.word[self.matched_chars] == key:
+            self.matched_chars += 1
+            if self.matched_chars == len(self.word):
+                self.remove_flag = True
+            return True
+        return False
 
 def main():
     init_pygame()
-
+    score = 0
     current_mode = 'words'  # Change this to 'words' for floating words mode
 
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -266,18 +287,25 @@ def main():
     while running:
         dt = clock.tick(60) / 1000
 
+        # ... Inside your main loop ...
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_BACKSPACE:
-                    user_input = user_input[:-1]
-                elif event.key == pygame.K_RETURN:
-                    user_input = ''
-                elif event.key == pygame.K_ESCAPE:
+                for obj in floating_objects:
+                    if isinstance(obj, FloatingWord):
+                        score_increment = obj.handle_key_press(event.unicode)
+                        score += score_increment
+                if event.key == pygame.K_ESCAPE:
                     running = False
                 else:
-                    user_input += event.unicode
+                    for obj in floating_objects:
+                        if isinstance(obj, FloatingWord):
+                            if obj.matched_chars < len(obj.word) and obj.word[obj.matched_chars] == event.unicode:  # Add this check
+                                obj.matched_chars += 1
+                                if obj.matched_chars == len(obj.word):
+                                    floating_objects.remove(obj)
+                                    score += len(obj.word) 
 
         # Spawn new floating objects based on the current mode
         if time.time() - last_spawn_time >= LETTER_SPAWN_INTERVAL:
