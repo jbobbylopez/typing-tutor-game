@@ -55,5 +55,26 @@ class TestFloatingWordBehavior(unittest.TestCase):
         floating_word = FloatingWord("test", font, 100, 100, (0, -2), (255, 255, 255))
         self.assertEqual(floating_word.speed, (0, -2))
 
+class TestFloatingWordPosition(unittest.TestCase):
+    def setUp(self):
+        pygame.init()
+        pygame.font.init()
+
+    def test_floating_word_position(self):
+        screen_width, screen_height = 800, 600
+        font_path = "assets/DejaVuSansMono.ttf"
+        font_size = 32
+        font = pygame.font.Font(font_path, font_size)
+        floating_objects = []
+
+        INPUT_BOX_HEIGHT = 50  # Adjust this value to match the height of the green text input box
+
+        for _ in range(10):  # Test 10 random floating words
+            word = create_floating_word(font, screen_width, screen_height, floating_objects)
+            self.assertIsNotNone(word)
+            self.assertGreaterEqual(word.y, screen_height - INPUT_BOX_HEIGHT - font.size(word.word)[1])
+            self.assertLessEqual(word.y, screen_height - INPUT_BOX_HEIGHT - font.size(word.word)[1])
+
+
 if __name__ == '__main__':
     unittest.main()

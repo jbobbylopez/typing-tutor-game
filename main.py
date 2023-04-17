@@ -67,9 +67,11 @@ def create_floating_word(font, screen_width, screen_height, floating_objects, ma
     success = False
     attempts = 0
 
+    INPUT_BOX_TOP = 350 # Adjust this value to match the top edge of the green text input box
+
     while not success and attempts < max_attempts:
         x = random.randint(TEXT_INPUT_HEIGHT, screen_width - font.size(word)[0])
-        y = random.randint(TEXT_INPUT_HEIGHT, screen_height - font.size(word)[1])
+        y = random.randint(INPUT_BOX_TOP - font.size(word)[1], INPUT_BOX_TOP - font.size(word)[1])
 
         # Check for collisions with existing floating words
         collision = False
@@ -77,7 +79,7 @@ def create_floating_word(font, screen_width, screen_height, floating_objects, ma
             if isinstance(obj, FloatingWord):
                 obj_rect = pygame.Rect(obj.x, obj.y, font.size(obj.word)[0], font.size(obj.word)[1])
                 new_obj_rect = pygame.Rect(x, y, font.size(word)[0], font.size(word)[1])
-                if obj_rect.colliderect(new_obj_rect):
+                if obj_rect.colliderect(new_obj_rect) or obj_rect.inflate(50, 50).colliderect(new_obj_rect):
                     collision = True
                     break
 
