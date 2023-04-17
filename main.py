@@ -126,18 +126,28 @@ def read_words_from_file(file_path):
 
 def check_words(char, floating_objects):
     score_increment = 0
-    matched = False
+    fully_matched_objects = []
+    prev_char = ''
+
     for obj in floating_objects:
         if isinstance(obj, FloatingWord):
             if obj.matched_chars < len(obj.word) and obj.word[obj.matched_chars] == char:
-                obj.matched_chars += 1
-                matched = True
+                if char != prev_char or (char == prev_char and obj.matched_chars == 0) or (char == prev_char and obj.matched_chars > 0 and obj.word[obj.matched_chars - 1] == prev_char):
+                    obj.matched_chars += 1
+
                 if obj.matched_chars == len(obj.word):
-                    floating_objects.remove(obj)
                     score_increment += len(obj.word)
-            elif not matched:
+                    fully_matched_objects.append(obj)
+            else:
                 obj.matched_chars = 0
+
+    # Remove fully matched objects from floating_objects
+    floating_objects[:] = [obj for obj in floating_objects if obj not in fully_matched_objects]
+
     return score_increment
+
+
+
 
 # Add this line to read words from the frequency list
 frequency_list = set(read_words_from_file('assets/frequency_list.txt'))
@@ -264,9 +274,9 @@ def main():
 
     # Setup Sound Effects
     pygame.mixer.init(frequency=44100, size=-16, channels=3, buffer=8192)
-    pygame.mixer.music.set_volume(1.0)  # 1.0 is the maximum volume
-    pygame.mixer.music.load("assets/risingpop1.mp3")
-    success_sound = pygame.mixer.Sound("assets/risingpop1.mp3")
+    pygame.mixer.Channel(1).set_volume(0.3)  # 1.0 is the maximum volume
+    #pygame.mixer.music.load("assets/risingpop1.mp3")
+    success_sound = pygame.mixer.Sound("assets/quickpop1.mp3")
     success_channel = pygame.mixer.Channel(1)
 
     # Setup font configuration
@@ -332,11 +342,13 @@ def main():
                 else:
                     user_input += event.unicode
 
+                prev_char = user_input[-2] if len(user_input) >= 2 else ''
                 score_increment = check_words(user_input[-1] if user_input else '', floating_objects)
+                #score_increment = check_words(user_input[-1] if user_input else '', floating_objects)
                 score += score_increment
 
                 if score_increment > 0:
-                    channel = pygame.mixer.find_channel()
+                    channel = pygame.mixer.Channel(1)
                     if channel:
                         channel.play(success_sound)
                 if event.key == pygame.K_ESCAPE:
