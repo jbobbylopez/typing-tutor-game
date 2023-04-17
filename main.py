@@ -243,6 +243,7 @@ def main():
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Typing Game")
 
+
     # Add the font-related statements here
     font_path = "assets/DejaVuSansMono.ttf"
     font_size = 32
@@ -283,8 +284,13 @@ def main():
     hands_image_y = HEIGHT - hands_image.get_height()
 
 
+    input_font = pygame.font.Font(pygame.font.get_default_font(), 28)
 
     while running:
+        input_box_text = '>' + user_input
+        input_text_surface = input_font.render(input_box_text, True, (0, 0, 0))
+        input_box_rect = pygame.Rect(50, HEIGHT - 50, 700, 40)
+
         dt = clock.tick(60) / 1000
 
         # ... Inside your main loop ...
@@ -292,6 +298,15 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_BACKSPACE:
+                    user_input = user_input[:-1]
+                elif event.key == pygame.K_RETURN:
+                    user_input += '\n'
+                elif event.key == pygame.K_ESCAPE:
+                    running = False
+                else:
+                    user_input += event.unicode
+
                 for obj in floating_objects:
                     if isinstance(obj, FloatingWord):
                         score_increment = obj.handle_key_press(event.unicode)
@@ -325,7 +340,7 @@ def main():
             if isinstance(obj, FloatingLetter) and user_input and user_input[-1].lower() == obj.letter.lower() and not obj.highlighted:
                 obj.highlight()
                 user_input = user_input[:-1]
-            elif isinstance(obj, FloatingWord) and user_input.lower() == obj.word.lower() and not obj.highlighted:
+            elif isinstance(obj, FloatingWord) and user_input.lower() == obj.word.lower() and not obj.highlight:
                 obj.highlight()
                 user_input = ''
 
@@ -338,6 +353,10 @@ def main():
         screen.fill(BACKGROUND_COLOR)
         screen.blit(keyboard_image, (keyboard_image_x, keyboard_image_y))
         screen.blit(hands_image, (hands_image_x, hands_image_y))
+
+        pygame.draw.rect(screen, (255, 255, 255), input_box_rect)
+        pygame.draw.rect(screen, (0, 0, 0), input_box_rect, 2)
+        screen.blit(input_text_surface, (input_box_rect.x + 10, input_box_rect.y + 5))
 
 
         # Draw floating objects
