@@ -127,19 +127,17 @@ def read_words_from_file(file_path):
 def check_words(char, floating_objects):
     score_increment = 0
     fully_matched_objects = []
-    prev_char = ''
 
     for obj in floating_objects:
         if isinstance(obj, FloatingWord):
             if obj.matched_chars < len(obj.word) and obj.word[obj.matched_chars] == char:
-                if char != prev_char or (char == prev_char and obj.matched_chars == 0) or (char == prev_char and obj.matched_chars > 0 and obj.word[obj.matched_chars - 1] == prev_char):
-                    obj.matched_chars += 1
+                obj.matched_chars += 1
 
                 if obj.matched_chars == len(obj.word):
                     score_increment += len(obj.word)
                     fully_matched_objects.append(obj)
             else:
-                obj.matched_chars = 0
+                obj.matched_chars = obj.word[:obj.matched_chars].rfind(char) + 1
 
     # Remove fully matched objects from floating_objects
     floating_objects[:] = [obj for obj in floating_objects if obj not in fully_matched_objects]
@@ -267,6 +265,8 @@ def main():
     init_pygame()
     score = 0
     current_mode = 'words'  # Change this to 'words' for floating words mode
+    clock = pygame.time.Clock()
+    floating_objects = []
 
     # Setup application window config
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -279,16 +279,6 @@ def main():
     success_sound = pygame.mixer.Sound("assets/quickpop1.mp3")
     success_channel = pygame.mixer.Channel(1)
 
-    # Setup font configuration
-    font_path = "assets/DejaVuSansMono.ttf"
-    font_size = 32
-    font = pygame.font.Font(font_path, font_size)
-    
-    clock = pygame.time.Clock()
-    
-    font = pygame.font.Font(None, 32)
-    text_input_surface = pygame.Surface((TEXT_INPUT_WIDTH, TEXT_INPUT_HEIGHT))
-
     # Set the position of the keyboard image at the bottom of the screen
     keyboard_image_filename = KEYBOARD_IMAGE
     keyboard_image_width = int(WIDTH * 0.9)
@@ -298,20 +288,20 @@ def main():
     keyboard_image_y = HEIGHT - keyboard_image.get_height()
     keyboard_rect = keyboard_image.get_rect(center=(WIDTH // 2, HEIGHT // 2))
 
-
+    # Setup font configuration
+    font_path = "assets/DejaVuSansMono.ttf"
+    input_font = pygame.font.Font(font_path, 24)
+    font = pygame.font.Font(pygame.font.get_default_font(), 16)
+    
+    # Input config
+    user_input = ''
+    text_input_surface = pygame.Surface((TEXT_INPUT_WIDTH, TEXT_INPUT_HEIGHT))
     TEXT_INPUT_X = (WIDTH - TEXT_INPUT_WIDTH) // 2
     TEXT_INPUT_Y = keyboard_image_y - TEXT_INPUT_HEIGHT - PADDING
-
     input_rect = pygame.Rect(TEXT_INPUT_X, TEXT_INPUT_Y, TEXT_INPUT_WIDTH, TEXT_INPUT_HEIGHT)
-
-    running = True
-    user_input = ''
     cursor_visible = True
     last_blink_time = time.time()
-
-    floating_objects = []
     last_spawn_time = time.time()
-
     
     hands_image = load_image(HANDS_IMAGE, int(WIDTH * 0.9), int(HEIGHT * 0.3))
     hands_rect = hands_image.get_rect(center=(WIDTH // 2, HEIGHT // 2))
@@ -319,12 +309,10 @@ def main():
     hands_image_y = HEIGHT - hands_image.get_height()
 
 
-    input_font = pygame.font.Font(pygame.font.get_default_font(), 28)
 
+    running = True
     while running:
         input_box_text = '>' + user_input
-        input_text_surface = input_font.render(input_box_text, True, (0, 0, 0))
-        input_box_rect = pygame.Rect(50, HEIGHT - 50, 700, 40)
 
         dt = clock.tick(60) / 1000
 
@@ -344,7 +332,6 @@ def main():
 
                 prev_char = user_input[-2] if len(user_input) >= 2 else ''
                 score_increment = check_words(user_input[-1] if user_input else '', floating_objects)
-                #score_increment = check_words(user_input[-1] if user_input else '', floating_objects)
                 score += score_increment
 
                 if score_increment > 0:
@@ -368,7 +355,7 @@ def main():
                 new_object = create_floating_letter(font, WIDTH, HEIGHT - TEXT_INPUT_HEIGHT)
                 floating_objects.append(new_object)
             elif current_mode == 'words':
-                new_object = create_floating_word(font, WIDTH, HEIGHT - TEXT_INPUT_HEIGHT, floating_objects)
+                new_object = create_floating_word(input_font, WIDTH, HEIGHT - TEXT_INPUT_HEIGHT, floating_objects)
                 if new_object is not None:
                     floating_objects.append(new_object)
 
@@ -394,32 +381,28 @@ def main():
         screen.blit(keyboard_image, (keyboard_image_x, keyboard_image_y))
         screen.blit(hands_image, (hands_image_x, hands_image_y))
 
-        pygame.draw.rect(screen, (255, 255, 255), input_box_rect)
-        pygame.draw.rect(screen, (0, 0, 0), input_box_rect, 2)
-        screen.blit(input_text_surface, (input_box_rect.x + 10, input_box_rect.y + 5))
-
 
         # Draw floating objects
         for obj in floating_objects:
             obj.draw(screen)
 
-        # Draw input box
+        # Draw Green Input box
         text_input_surface.fill(INPUT_BACKGROUND_COLOR)
         text_input_surface.set_alpha(128)
         screen.blit(text_input_surface, input_rect)
 
-        # Draw user input
-        wrapped_text = wrap_text(user_input, font, TEXT_INPUT_WIDTH - PADDING * 2)
+        # Draw user input inside green Input Box
+        wrapped_text = wrap_text(input_box_text, input_font, TEXT_INPUT_WIDTH - PADDING * 2)
         for i, line in enumerate(wrapped_text):
-            input_text = font.render(line, True, INPUT_TEXT_COLOR)
-            screen.blit(input_text, (TEXT_INPUT_X + PADDING, TEXT_INPUT_Y + PADDING + i * (font.get_height() + LINE_SPACING)))
+            input_text = input_font.render(line, True, INPUT_TEXT_COLOR)
+            screen.blit(input_text, (TEXT_INPUT_X + PADDING, TEXT_INPUT_Y + PADDING + i * (input_font.get_height() + LINE_SPACING)))
 
-        # Draw cursor
+        # Draw blinking input cursor
         if cursor_visible:
-            last_line_width = font.size(wrapped_text[-1])[0] if wrapped_text else 0
+            last_line_width = input_font.size(wrapped_text[-1])[0] if wrapped_text else 0
             cursor_x = TEXT_INPUT_X + PADDING + last_line_width
-            cursor_y = TEXT_INPUT_Y + PADDING + (len(wrapped_text) - 1) * (font.get_height() + LINE_SPACING)
-            cursor_h = font.get_height()
+            cursor_y = TEXT_INPUT_Y + PADDING + (len(wrapped_text) - 1) * (input_font.get_height() + LINE_SPACING)
+            cursor_h = input_font.get_height()
             cursor = pygame.Rect(cursor_x, cursor_y, 2, cursor_h)
             pygame.draw.rect(screen, INPUT_TEXT_COLOR, cursor)
 
