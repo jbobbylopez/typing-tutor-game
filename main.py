@@ -4,6 +4,7 @@ import time
 import random
 import string
 import textwrap
+import pygame.mixer
 
 from nltk.corpus import words
 import nltk
@@ -122,6 +123,16 @@ def read_words_from_file(file_path):
     with open(file_path, 'r') as file:
         words_list = file.read().splitlines()
     return words_list
+
+def check_words(user_input, floating_objects):
+    for obj in floating_objects:
+        if isinstance(obj, FloatingWord):
+            if obj.matched_chars < len(obj.word) and obj.word[obj.matched_chars] == user_input:
+                obj.matched_chars += 1
+                if obj.matched_chars == len(obj.word):
+                    floating_objects.remove(obj)
+                    return len(obj.word)
+    return 0
 
 # Add this line to read words from the frequency list
 frequency_list = set(read_words_from_file('assets/frequency_list.txt'))
@@ -242,11 +253,18 @@ def main():
     score = 0
     current_mode = 'words'  # Change this to 'words' for floating words mode
 
+    # Setup application window config
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Typing Game")
 
+    # Setup Sound Effects
+    pygame.mixer.init(frequency=44100, size=-16, channels=3, buffer=8192)
+    pygame.mixer.music.set_volume(1.0)  # 1.0 is the maximum volume
+    pygame.mixer.music.load("assets/risingpop1.mp3")
+    success_sound = pygame.mixer.Sound("assets/risingpop1.mp3")
+    success_channel = pygame.mixer.Channel(1)
 
-    # Add the font-related statements here
+    # Setup font configuration
     font_path = "assets/DejaVuSansMono.ttf"
     font_size = 32
     font = pygame.font.Font(font_path, font_size)
@@ -309,10 +327,13 @@ def main():
                 else:
                     user_input += event.unicode
 
-                for obj in floating_objects:
-                    if isinstance(obj, FloatingWord):
-                        score_increment = obj.handle_key_press(event.unicode)
-                        score += score_increment
+                score_increment = check_words(user_input[-1] if user_input else '', floating_objects)
+                score += score_increment
+
+                if score_increment > 0:
+                    channel = pygame.mixer.find_channel()
+                    if channel:
+                        channel.play(success_sound)
                 if event.key == pygame.K_ESCAPE:
                     running = False
                 else:
