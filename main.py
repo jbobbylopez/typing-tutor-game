@@ -60,8 +60,10 @@ def create_floating_letter(font, screen_width, screen_height):
     #x = screen_width // 2 - font.size(letter)[0] // 2
     x = random.randint(TEXT_INPUT_HEIGHT, screen_width - font.size(letter)[0])
     y = random.randint(TEXT_INPUT_HEIGHT, screen_height - font.size(letter)[1])
-    speed = MAX_SPEED
-    return FloatingLetter(letter, font, x, y, speed, color=DEFAULT_COLOR)
+    speed = random.uniform(1, 3)
+    speed_x = random.uniform(-1, 1) * speed
+    speed_y = -speed
+    return FloatingLetter(letter, font, x, y, (speed_x, speed_y), color=DEFAULT_COLOR) 
 
 def create_floating_word(font, screen_width, screen_height, floating_objects, max_attempts=10):
     word = random.choice(list(simple_words))
