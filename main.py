@@ -311,12 +311,12 @@ def main():
         if time.time() - last_spawn_time >= LETTER_SPAWN_INTERVAL:
             if current_mode == 'letters':
                 new_object = create_floating_letter(font, WIDTH, HEIGHT - TEXT_INPUT_HEIGHT)
+                floating_objects.append(new_object)
             elif current_mode == 'words':
                 new_object = create_floating_word(font, WIDTH, HEIGHT - TEXT_INPUT_HEIGHT, floating_objects)
                 if new_object is not None:
                     floating_objects.append(new_object)
 
-            floating_objects.append(new_object)
             last_spawn_time = time.time()
 
         # Update floating objects based on the current mode
