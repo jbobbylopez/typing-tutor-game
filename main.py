@@ -353,7 +353,7 @@ def main():
                 if event.key == pygame.K_BACKSPACE:
                     user_input = user_input[:-1]
                 elif event.key == pygame.K_RETURN:
-                    user_input += '\n'
+                    user_input = ''
                 elif event.key == pygame.K_ESCAPE:
                     running = False
                 else:
