@@ -299,7 +299,7 @@ def main():
     pygame.mixer.init(frequency=44100, size=-16, channels=3, buffer=8192)
     pygame.mixer.Channel(1).set_volume(0.3)  # 1.0 is the maximum volume
     #pygame.mixer.music.load("assets/risingpop1.mp3")
-    success_sound = pygame.mixer.Sound("assets/quickpop1.mp3")
+    success_sound = pygame.mixer.Sound("assets/quickpop2.mp3")
     success_channel = pygame.mixer.Channel(1)
 
     # Set the position of the keyboard image at the bottom of the screen
@@ -338,7 +338,6 @@ def main():
 
     running = True
     while running:
-        input_box_text = '>' + user_input
 
         dt = clock.tick(60) / 1000
 
@@ -374,6 +373,8 @@ def main():
                                 if obj.matched_chars == len(obj.word):
                                     floating_objects.remove(obj)
                                     score += len(obj.word) 
+
+        input_box_text = '>' + user_input
 
         # Spawn new floating objects based on the current mode
         if time.time() - last_spawn_time >= LETTER_SPAWN_INTERVAL:
