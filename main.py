@@ -1,13 +1,15 @@
-import pygame
 import os
 import time
 import random
 import string
+from xml.dom import minidom
 import textwrap
+import pygame
+import cairosvg
+from io import BytesIO
 import pygame.mixer
-
-from nltk.corpus import words
 import nltk
+from nltk.corpus import words
 
 nltk.download('words')
 words_list = words.words()
@@ -33,6 +35,7 @@ MAX_SPEED = 20.0
 KEYBOARD_IMAGE = "keyboard.png"
 HANDS_IMAGE = "hands.png"
 HIGHLIGHT_COLOR = (255, 255, 0)  # Yellow color for highlighting matched characters
+SVG_BACKGROUND_IMAGE = "assets/background.svg"
 
 
 def init_pygame():
@@ -46,6 +49,21 @@ def load_image(filename, width, height, alpha=None):
         image.fill((255, 255, 255, alpha), None, pygame.BLEND_RGBA_MULT)
     image = pygame.transform.scale(image, (width, height))
     return image
+
+def load_svg_image(filename, width, height):
+    # Load SVG data
+    with open(filename, 'rb') as svg_file:
+        svg_data = svg_file.read()
+
+    # Convert SVG to PNG
+    png_data = BytesIO()
+    cairosvg.svg2png(bytestring=svg_data, write_to=png_data, output_width=width, output_height=height)
+    png_data.seek(0)
+
+    # Load PNG data into a pygame surface
+    png_image = pygame.image.load(png_data)
+
+    return png_image
 
 def handle_cursor_blinking(current_time, last_blink_time, cursor_visible, cursor_blink_rate):
     if current_time - last_blink_time >= cursor_blink_rate / 1000:
@@ -335,6 +353,8 @@ def main():
     button_font = pygame.font.Font(font_path, 18)
     button = Button(WIDTH // 2 - 100, 50, 200, 40, "Click me!", button_font, (255, 255, 255), (0, 128, 0), (0, 255, 0), on_button_click)
 
+    # Set app background image
+    background_image = load_svg_image(SVG_BACKGROUND_IMAGE, WIDTH, HEIGHT)
 
     running = True
     while running:
@@ -404,7 +424,8 @@ def main():
         cursor_visible, last_blink_time = handle_cursor_blinking(time.time(), last_blink_time, cursor_visible, CURSOR_BLINK_RATE)
 
         # Draw
-        screen.fill(BACKGROUND_COLOR)
+        #screen.fill(BACKGROUND_COLOR)
+        screen.blit(background_image, (0, 0))
         screen.blit(keyboard_image, (keyboard_image_x, keyboard_image_y))
         screen.blit(hands_image, (hands_image_x, hands_image_y))
 
