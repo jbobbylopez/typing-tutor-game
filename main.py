@@ -31,11 +31,12 @@ DEFAULT_COLOR = (153, 255, 153)
 INPUT_BACKGROUND_COLOR = (0, 100, 0)
 INPUT_TEXT_COLOR = (153, 255, 153)
 MIN_SPEED = 20.0
-MAX_SPEED = 20.0
+MAX_SPEED = 100.0
 KEYBOARD_IMAGE = "keyboard.png"
 HANDS_IMAGE = "hands.png"
 HIGHLIGHT_COLOR = (255, 255, 0)  # Yellow color for highlighting matched characters
 SVG_BACKGROUND_IMAGE = "assets/background.svg"
+BACKGROUND_IMAGE = "background2.png"
 
 
 def init_pygame():
@@ -161,6 +162,7 @@ def check_words(char, floating_objects):
 
 def on_button_click():
     print("Button clicked!")
+    pygame.display.toggle_fullscreen()
 
 
 # Add this line to read words from the frequency list
@@ -212,6 +214,7 @@ class FloatingLetter(FloatingObject):
         self.height = rendered_letter.get_height()
 
     def draw(self, surface):
+        self.draw_with_border(surface, border_thickness=2, border_color=(0, 0, 0))
         if self.highlighted:
             elapsed_time = time.time() - self.highlight_start_time
             self.flash_index = int(elapsed_time // self.flash_duration) % len(self.highlight_colors)
@@ -221,6 +224,15 @@ class FloatingLetter(FloatingObject):
 
         rendered_letter = self.font.render(self.letter, True, color)
         surface.blit(rendered_letter, (self.x, self.y))
+
+    def draw_with_border(self, screen, border_thickness, border_color):
+        text_surface = self.font.render(self.letter, True, self.color)
+        border_surface = self.font.render(self.letter, True, border_color)
+
+        for x_offset in range(-border_thickness, border_thickness + 1):
+            for y_offset in range(-border_thickness, border_thickness + 1):
+                screen.blit(border_surface, (self.x + x_offset, self.y + y_offset))
+        screen.blit(text_surface, (self.x, self.y))
 
     def update(self, dt):
         self.y += self.speed_y * dt  # Use self.speed_y instead of self.speed
@@ -317,7 +329,7 @@ def main():
     pygame.mixer.init(frequency=44100, size=-16, channels=3, buffer=8192)
     pygame.mixer.Channel(1).set_volume(0.3)  # 1.0 is the maximum volume
     #pygame.mixer.music.load("assets/risingpop1.mp3")
-    success_sound = pygame.mixer.Sound("assets/quickpop2.mp3")
+    success_sound = pygame.mixer.Sound("assets/duckfart2.mp3")
     success_channel = pygame.mixer.Channel(1)
 
     # Set the position of the keyboard image at the bottom of the screen
@@ -351,10 +363,10 @@ def main():
 
     # Create a button instance
     button_font = pygame.font.Font(font_path, 18)
-    button = Button(WIDTH // 2 - 100, 50, 200, 40, "Click me!", button_font, (255, 255, 255), (0, 128, 0), (0, 255, 0), on_button_click)
+    button = Button(WIDTH // 2 - 100, 50, 200, 40, "Full Screen", button_font, (255, 255, 255), (0, 128, 0), (0, 255, 0), on_button_click)
 
     # Set app background image
-    background_image = load_svg_image(SVG_BACKGROUND_IMAGE, WIDTH, HEIGHT)
+    background_image = load_image(BACKGROUND_IMAGE, WIDTH, HEIGHT)
 
     running = True
     while running:
@@ -376,13 +388,22 @@ def main():
                     user_input += event.unicode
 
                 prev_char = user_input[-2] if len(user_input) >= 2 else ''
-                score_increment = check_words(user_input[-1] if user_input else '', floating_objects)
-                score += score_increment
 
-                if score_increment > 0:
-                    channel = pygame.mixer.Channel(1)
-                    if channel:
-                        channel.play(success_sound)
+                
+
+                # Play sound on success
+                word_completed = check_words(user_input[-1] if user_input else '', floating_objects)
+                if word_completed:
+                    success_channel.play(success_sound)
+                    score += 1
+
+                #score_increment = check_words(user_input[-1] if user_input else '', floating_objects)
+                #score += score_increment
+                #if score_increment > 0:
+                #    success_channel.play(success_sound)
+
+                
+                # Handle ESC key
                 if event.key == pygame.K_ESCAPE:
                     running = False
                 else:
@@ -424,7 +445,7 @@ def main():
         cursor_visible, last_blink_time = handle_cursor_blinking(time.time(), last_blink_time, cursor_visible, CURSOR_BLINK_RATE)
 
         # Draw
-        #screen.fill(BACKGROUND_COLOR)
+        screen.fill(BACKGROUND_COLOR)
         screen.blit(background_image, (0, 0))
         screen.blit(keyboard_image, (keyboard_image_x, keyboard_image_y))
         screen.blit(hands_image, (hands_image_x, hands_image_y))
@@ -433,6 +454,12 @@ def main():
         button.draw(screen)
 
         # Draw floating objects
+        #for obj in floating_objects:
+        #    if isinstance(obj, FloatingWord):
+        #        obj.draw_with_border(screen, border_thickness=2, border_color=(0, 0, 0))
+        #    else:
+        #        obj.draw(screen)
+
         for obj in floating_objects:
             obj.draw(screen)
 
