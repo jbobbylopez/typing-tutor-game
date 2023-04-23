@@ -36,7 +36,7 @@ KEYBOARD_IMAGE = "keyboard.png"
 HANDS_IMAGE = "hands.png"
 HIGHLIGHT_COLOR = (255, 255, 0)  # Yellow color for highlighting matched characters
 SVG_BACKGROUND_IMAGE = "assets/background.svg"
-BACKGROUND_IMAGE = "background2.png"
+BACKGROUND_IMAGE = "brownbunny1.png"
 
 
 def init_pygame():
@@ -247,6 +247,8 @@ class FloatingLetter(FloatingObject):
     def ready_to_remove(self):
         return self.highlighted and time.time() - self.highlight_start_time >= self.flash_duration * len(self.highlight_colors)
 
+import random
+
 class FloatingWord(FloatingObject):
     def __init__(self, word, font, x, y, speed, color=DEFAULT_COLOR):
         super().__init__(x, y, speed)
@@ -262,6 +264,10 @@ class FloatingWord(FloatingObject):
             floating_letter = FloatingLetter(char, font, current_x, y, speed, color)
             current_x += floating_letter.width
             self.letters.append(floating_letter)
+
+        # Add color options
+        self.color_options = [(250, 195, 152), (193, 250, 194), (190, 194, 250), (200, 250, 193)]  # Example colors
+        self.color = random.choice(self.color_options)  # Choose a random color for the word
 
     def draw(self, screen):
         for i, letter in enumerate(self.letters):
@@ -288,6 +294,7 @@ class FloatingWord(FloatingObject):
                 self.remove_flag = True
             return True
         return False
+
 
 class Button:
     def __init__(self, x, y, width, height, text, font, text_color, button_color, hover_color, click_action=None):
@@ -396,13 +403,8 @@ def main():
                 if word_completed:
                     success_channel.play(success_sound)
                     score += 1
+                    user_input = ''
 
-                #score_increment = check_words(user_input[-1] if user_input else '', floating_objects)
-                #score += score_increment
-                #if score_increment > 0:
-                #    success_channel.play(success_sound)
-
-                
                 # Handle ESC key
                 if event.key == pygame.K_ESCAPE:
                     running = False
