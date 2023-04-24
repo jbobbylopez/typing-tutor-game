@@ -36,7 +36,7 @@ KEYBOARD_IMAGE = "keyboard.png"
 HANDS_IMAGE = "hands.png"
 HIGHLIGHT_COLOR = (255, 255, 0)  # Yellow color for highlighting matched characters
 SVG_BACKGROUND_IMAGE = "assets/background.svg"
-BACKGROUND_IMAGE = "brownbunny1.png"
+BACKGROUND_IMAGE = "brownbunny2.png"
 
 
 def init_pygame():
@@ -336,7 +336,7 @@ def main():
     pygame.mixer.init(frequency=44100, size=-16, channels=3, buffer=8192)
     pygame.mixer.Channel(1).set_volume(0.3)  # 1.0 is the maximum volume
     #pygame.mixer.music.load("assets/risingpop1.mp3")
-    success_sound = pygame.mixer.Sound("assets/duckfart2.mp3")
+    success_sound = pygame.mixer.Sound("assets/quickpop2.mp3")
     success_channel = pygame.mixer.Channel(1)
 
     # Set the position of the keyboard image at the bottom of the screen
@@ -401,6 +401,7 @@ def main():
                 # Play sound on success
                 word_completed = check_words(user_input[-1] if user_input else '', floating_objects)
                 if word_completed:
+                    success_channel.stop()
                     success_channel.play(success_sound)
                     score += 1
                     user_input = ''
