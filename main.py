@@ -277,12 +277,19 @@ class FloatingWord(FloatingObject):
                 letter.color = self.color
             letter.draw(screen)
 
+    #def is_offscreen(self, screen_height):
+    #    return any(letter.is_offscreen(screen_height) for letter in self.letters)
     def is_offscreen(self, screen_height):
-        return any(letter.is_offscreen(screen_height) for letter in self.letters)
+        offscreen = any(letter.is_offscreen(screen_height) for letter in self.letters)
+        if offscreen:
+            self.remove_flag = True
+        return offscreen
 
     def update(self, dt):
         for letter in self.letters:
             letter.update(dt)
+            if letter.is_offscreen(HEIGHT - TEXT_INPUT_HEIGHT):  # Add this check
+                self.remove_flag = True  # Set remove_flag for off-screen objects
 
     def ready_to_remove(self):
         return self.remove_flag
@@ -320,6 +327,43 @@ class Button:
 
         text_surface = self.font.render(self.text, True, self.text_color)
         screen.blit(text_surface, (self.x + (self.width - text_surface.get_width()) // 2, self.y + (self.height - text_surface.get_height()) // 2))
+
+class Scoreboard:
+    def __init__(self, x, y, width, height, font_path, font_size=18, border_color=(255, 255, 255), background_color=(0, 0, 0, 128)):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.font = pygame.font.Font(font_path, font_size)
+        self.border_color = border_color
+        self.background_color = background_color
+        self.words_typed = 0
+        self.words_missed = 0
+        self.start_time = time.time()
+
+    def update(self, words_typed, words_missed):
+        self.words_typed = words_typed
+        self.words_missed = words_missed
+
+    def draw(self, screen):
+        # Draw semi-transparent background
+        background_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        background_surface.fill(self.background_color)
+        screen.blit(background_surface, (self.x, self.y))
+
+        # Draw border
+        border_rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        pygame.draw.rect(screen, self.border_color, border_rect, 1)
+
+        # Draw scoreboard text
+        elapsed_time = int(time.time() - self.start_time)
+        score_text = f"Words typed: {self.words_typed}\nWords missed: {self.words_missed}\nElapsed time: {elapsed_time}s"
+        score_lines = score_text.split("\n")
+        score_x = self.x + 10
+        score_y = self.y + 10
+        for i, line in enumerate(score_lines):
+            score_line = self.font.render(line, True, (255, 255, 255))
+            screen.blit(score_line, (score_x, score_y + i * (self.font.get_height() + 5)))
 
 def main():
     init_pygame()
@@ -374,6 +418,12 @@ def main():
 
     # Set app background image
     background_image = load_image(BACKGROUND_IMAGE, WIDTH, HEIGHT)
+    pygame.display.set_icon(background_image)
+
+    # Set up scoreboard
+    words_typed = 0
+    words_missed = 0
+    scoreboard = Scoreboard(WIDTH - 220, 10, 200, 100, font_path)
 
     running = True
     while running:
@@ -404,6 +454,7 @@ def main():
                     success_channel.stop()
                     success_channel.play(success_sound)
                     score += 1
+                    words_typed += 1
                     user_input = ''
 
                 # Handle ESC key
@@ -442,6 +493,11 @@ def main():
                 obj.highlight()
                 user_input = ''
 
+        # Handle missed words
+        for obj in floating_objects:
+            if obj.remove_flag and isinstance(obj, FloatingWord) and obj.matched_chars < len(obj.word):
+                words_missed += 1
+
         floating_objects = [obj for obj in floating_objects if not obj.is_offscreen(HEIGHT - TEXT_INPUT_HEIGHT) and not obj.ready_to_remove()]
 
         # Cursor blink handling
@@ -457,12 +513,6 @@ def main():
         button.draw(screen)
 
         # Draw floating objects
-        #for obj in floating_objects:
-        #    if isinstance(obj, FloatingWord):
-        #        obj.draw_with_border(screen, border_thickness=2, border_color=(0, 0, 0))
-        #    else:
-        #        obj.draw(screen)
-
         for obj in floating_objects:
             obj.draw(screen)
 
@@ -485,6 +535,10 @@ def main():
             cursor_h = input_font.get_height()
             cursor = pygame.Rect(cursor_x, cursor_y, 2, cursor_h)
             pygame.draw.rect(screen, INPUT_TEXT_COLOR, cursor)
+
+        # Update and draw scoreboard
+        scoreboard.update(words_typed, words_missed)
+        scoreboard.draw(screen)
 
         pygame.display.flip()
 
