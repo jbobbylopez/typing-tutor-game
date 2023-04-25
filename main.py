@@ -74,15 +74,40 @@ def handle_cursor_blinking(current_time, last_blink_time, cursor_visible, cursor
         last_blink_time = current_time
     return cursor_visible, last_blink_time
 
-def create_floating_letter(font, screen_width, screen_height):
+def create_floating_letter(font, screen_width, screen_height, floating_objects, max_attempts=10):
     letter = random.choice(string.ascii_letters)
-    #x = screen_width // 2 - font.size(letter)[0] // 2
-    x = random.randint(TEXT_INPUT_HEIGHT, screen_width - font.size(letter)[0])
-    y = random.randint(TEXT_INPUT_HEIGHT, screen_height - font.size(letter)[1])
-    speed = random.uniform(1, 3)
-    speed_x = random.uniform(-1, 1) * speed
-    speed_y = -speed
-    return FloatingLetter(letter, font, x, y, (speed_x, speed_y), color=DEFAULT_COLOR) 
+    success = False
+    attempts = 0
+
+    INPUT_BOX_TOP = 350 # Adjust this value to match the top edge of the green text input box
+
+    while not success and attempts < max_attempts:
+        x = random.randint(TEXT_INPUT_HEIGHT, screen_width - font.size(letter)[0])
+        y = random.randint(INPUT_BOX_TOP - font.size(letter)[1], INPUT_BOX_TOP - font.size(letter)[1])
+
+        # Check for collisions with existing floating words
+        collision = False
+        for obj in floating_objects:
+            if isinstance(obj, FloatingLetter):
+                obj_rect = pygame.Rect(obj.x, obj.y, font.size(obj.letter)[0], font.size(obj.letter)[1])
+                new_obj_rect = pygame.Rect(x, y, font.size(letter)[0], font.size(letter)[1])
+                if obj_rect.colliderect(new_obj_rect) or obj_rect.inflate(50, 50).colliderect(new_obj_rect):
+                    collision = True
+                    break
+
+        if not collision:
+            success = True
+            collision = False
+        else:
+            attempts += 1
+
+    if success:
+        speed_x = 0  # Set the x-speed to 0
+        speed_y = -random.uniform(MIN_SPEED, MAX_SPEED)  # Set the y-speed to a negative random value between MIN_SPEED and MAX_SPEED
+        speed = (speed_x, speed_y)
+        return FloatingLetter(letter, font, x, y, speed, color=DEFAULT_COLOR)
+    else:
+        return None
 
 def create_floating_word(font, screen_width, screen_height, floating_objects, max_attempts=10):
     word = random.choice(list(simple_words))
@@ -210,6 +235,7 @@ class FloatingLetter(FloatingObject):
         self.highlighted = False
         self.highlight_start_time = None
         self.flash_index = 0
+        self.remove_flag = False
 
         rendered_letter = self.font.render(self.letter, True, self.color)
         self.width = rendered_letter.get_width()
@@ -248,8 +274,6 @@ class FloatingLetter(FloatingObject):
 
     def ready_to_remove(self):
         return self.highlighted and time.time() - self.highlight_start_time >= self.flash_duration * len(self.highlight_colors)
-
-import random
 
 class FloatingWord(FloatingObject):
     def __init__(self, word, font, x, y, speed, color=DEFAULT_COLOR):
@@ -453,8 +477,6 @@ def main():
 
                 prev_char = user_input[-2] if len(user_input) >= 2 else ''
 
-                
-
                 # Play sound on success
                 word_completed = check_words(user_input[-1] if user_input else '', floating_objects)
                 if word_completed:
@@ -481,7 +503,7 @@ def main():
         # Spawn new floating objects based on the current mode
         if time.time() - last_spawn_time >= LETTER_SPAWN_INTERVAL:
             if current_mode == 'letters':
-                new_object = create_floating_letter(font, WIDTH, HEIGHT - TEXT_INPUT_HEIGHT)
+                new_object = create_floating_letter(input_font, WIDTH, HEIGHT - TEXT_INPUT_HEIGHT, floating_objects)
                 floating_objects.append(new_object)
             elif current_mode == 'words':
                 new_object = create_floating_word(input_font, WIDTH, HEIGHT - TEXT_INPUT_HEIGHT, floating_objects)
@@ -500,10 +522,16 @@ def main():
                 obj.highlight()
                 user_input = ''
 
-        # Handle missed words
-        for obj in floating_objects:
-            if obj.remove_flag and isinstance(obj, FloatingWord) and obj.matched_chars < len(obj.word):
-                words_missed += 1
+        if current_mode == 'words':
+            # Handle missed words
+            for obj in floating_objects:
+                if obj.remove_flag and isinstance(obj, FloatingWord) and obj.matched_chars < len(obj.word):
+                    words_missed += 1
+        elif current_mode == 'letters':
+            # Handle missed letters
+            for obj in floating_objects:
+                if obj.remove_flag and isinstance(obj, FloatingLetter) and obj.matched_chars < len(obj.word):
+                    words_missed += 1
 
         floating_objects = [obj for obj in floating_objects if not obj.is_offscreen(HEIGHT - TEXT_INPUT_HEIGHT) and not obj.ready_to_remove()]
 
